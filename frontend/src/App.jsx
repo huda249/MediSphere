@@ -2,8 +2,9 @@
 import { useState } from 'react'
 import {
   LayoutDashboard, CalendarDays, Bell, Users, BedDouble,
-  Droplets, Search, ChevronLeft, ChevronRight, ChevronDown,
-  Activity, Clock3, Settings, Server, Wrench
+  Droplets, ChevronLeft, ChevronRight, ChevronDown,
+  Activity, Clock3, Settings, Server, Wrench,
+  LogOut, UserRound
 } from 'lucide-react'
 import './App.css'
 import Scheduling from './pages/Scheduling'
@@ -148,17 +149,7 @@ function Sidebar({ activePage, onPageChange }) {
         ))}
       </nav>
 
-      <div className="sidebar-bottom">
-        <div className="sidebar-label">MEDISPHERE SYSTEM</div>
-        <div className="sidebar-note">
-          <Server size={17} />
-          <span>Hospital Management</span>
-        </div>
-        <div className="sidebar-note">
-          <Settings size={17} />
-          <span>Demo Workspace</span>
-        </div>
-      </div>
+      
     </aside>
   )
 }
@@ -257,7 +248,7 @@ function Dashboard() {
 
 function App() {
   const [activePage, setActivePage] = useState('Dashboard')
-  const [search, setSearch] = useState('')
+const [profileOpen, setProfileOpen] = useState(false)
 
   return (
     <div className="app-shell">
@@ -268,21 +259,46 @@ function App() {
           <div className="topbar-caption">HOSPITAL MANAGEMENT SYSTEM</div>
 
           <div className="topbar-actions">
-            <div className="search-field">
-              <Search size={19} />
-              <input
-                value={search}
-                onChange={event => setSearch(event.target.value)}
-                placeholder="Search patients, rooms, or ID"
-                aria-label="Search"
-              />
-            </div>
+            
 
-            <div className="profile">
-              <span className="avatar">MS</span>
-              <span>Demo Workspace</span>
-              <ChevronDown size={16} />
-            </div>
+            
+<div className="profile-container">
+  <button
+    className="profile profile-trigger"
+    onClick={() => setProfileOpen(!profileOpen)}
+    aria-expanded={profileOpen}
+    aria-label="Workspace menu"
+  >
+    <span className="avatar">MS</span>
+    <span>Demo Workspace</span>
+    <ChevronDown size={16} />
+  </button>
+
+  {profileOpen && (
+    <div className="profile-dropdown">
+      <div className="profile-dropdown-heading">
+        Demo Workspace
+      </div>
+
+      <div className="profile-dropdown-item">
+        <UserRound size={17} />
+        <span>Switch Account</span>
+      </div>
+
+      <div className="profile-dropdown-divider" />
+
+      <div className="profile-dropdown-item">
+        <LogOut size={17} />
+        <span>Log Out</span>
+      </div>
+
+      <div className="profile-dropdown-note">
+        Account management is not enabled in this demo.
+      </div>
+    </div>
+  )}
+</div>
+
           </div>
         </header>
 
