@@ -1,7 +1,7 @@
 
 # MediSphere
 
-MediSphere is a distributed hospital management system developed as a software engineering group project. It combines a React frontend with independent Java Spring Boot services for patient management, emergency queue management, operating room scheduling, admissions, and blood and organ donor management.
+MediSphere is a distributed hospital management system developed as our group project. It combines a React frontend with independent Java Spring Boot services for patient management, emergency queue management, operating room scheduling, admissions, and blood and organ donor management.
 
 ## Features
 
