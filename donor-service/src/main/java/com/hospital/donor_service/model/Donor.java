@@ -11,6 +11,7 @@ public class Donor {
     private Long id;
 
     private String name;
+    private String address;
     private String bloodType;     // e.g., "O-", "A+", "B-"
     private String organType;     // e.g., "Kidney", "Liver", or "None"
     private boolean available = true;
@@ -19,11 +20,21 @@ public class Donor {
 
     public Donor() {}
 
+    // Required by DatabaseHelper.java (lines 291 & 580)
+    public Donor(int id, String name, String address) {
+        this.id = (long) id;
+        this.name = name;
+        this.address = address;
+    }
+
     public Long getId() { return id; }
     public void setId(Long id) { this.id = id; }
 
     public String getName() { return name; }
     public void setName(String name) { this.name = name; }
+
+    public String getAddress() { return address; }
+    public void setAddress(String address) { this.address = address; }
 
     public String getBloodType() { return bloodType; }
     public void setBloodType(String bloodType) { this.bloodType = bloodType; }
