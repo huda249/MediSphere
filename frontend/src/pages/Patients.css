@@ -1,7 +1,7 @@
 
 .patients-page {
   padding-bottom: 40px;
-  color: #242424;
+  color: #143e2f;
 }
 
 .patients-hero {
@@ -17,11 +17,11 @@
   line-height: 1.05;
   letter-spacing: -2px;
   margin: 12px 0;
-  color: #171717;
+  color: #103f2e;
 }
 
 .patients-hero p {
-  color: #77736d;
+  color: #52705e;
   margin: 0;
 }
 
@@ -33,7 +33,7 @@
   gap: 9px;
   border: 0;
   border-radius: 12px;
-  background: #171717;
+  background: #103f2e;
   color: white;
   padding: 13px 20px;
   font: inherit;
@@ -43,7 +43,7 @@
 
 .patients-add-btn:hover,
 .patients-submit-btn:hover {
-  background: #343434;
+  background: #21553f;
 }
 
 .patients-stats {
@@ -60,15 +60,15 @@
 }
 
 .patients-stat-sage {
-  background: #b7c88a;
+  background: #aed1b7;
 }
 
 .patients-stat-pink {
-  background: #e7b2c8;
+  background: #b8ddc8;
 }
 
 .patients-stat-blue {
-  background: #bfd4f6;
+  background: #d4e9dc;
 }
 
 .patients-stat-label {
@@ -88,13 +88,13 @@
 }
 
 .patients-stat small {
-  color: #464646;
+  color: #315b49;
   font-size: 12px;
 }
 
 .patients-panel {
-  background: #fffefa;
-  border: 1px solid #e9e3d9;
+  background: #ffffff;
+  border: 1px solid #d9e7de;
   border-radius: 20px;
   overflow: hidden;
 }
@@ -114,7 +114,7 @@
 
 .patients-panel-header p {
   margin: 0;
-  color: #77736d;
+  color: #52705e;
   font-size: 13px;
 }
 
@@ -123,8 +123,8 @@
   align-items: center;
   gap: 8px;
   background: white;
-  color: #242424;
-  border: 1px solid #dedbd5;
+  color: #143e2f;
+  border: 1px solid #d4e3d9;
   border-radius: 10px;
   padding: 10px 14px;
   font: inherit;
@@ -142,7 +142,7 @@
   align-items: center;
   gap: 16px;
   padding: 0 26px 20px;
-  color: #78746d;
+  color: #52705e;
   font-size: 13px;
 }
 
@@ -151,8 +151,8 @@
   align-items: center;
   gap: 10px;
   width: min(100%, 390px);
-  background: #f8f5ef;
-  border: 1px solid #e8e3da;
+  background: #f5faf7;
+  border: 1px solid #d9e7de;
   border-radius: 11px;
   padding: 11px 14px;
 }
@@ -163,7 +163,7 @@
   outline: 0;
   background: transparent;
   font: inherit;
-  color: #242424;
+  color: #143e2f;
 }
 
 .patients-table-scroll {
@@ -178,26 +178,26 @@
 }
 
 .patients-table th {
-  background: #f8f5ef;
+  background: #f5faf7;
   font-size: 12px;
   font-weight: 600;
-  color: #77736d;
+  color: #52705e;
   padding: 15px 20px;
   white-space: nowrap;
 }
 
 .patients-table td {
   padding: 19px 20px;
-  border-top: 1px solid #eee9e1;
+  border-top: 1px solid #e5efe8;
   font-size: 13px;
 }
 
 .patients-table tbody tr:hover {
-  background: #fcfaf6;
+  background: #f8fcf9;
 }
 
 .patients-id {
-  color: #77736d;
+  color: #52705e;
   font-weight: 600;
 }
 
@@ -210,7 +210,7 @@
   align-items: center;
   justify-content: center;
   min-width: 30px;
-  background: #f3d66b;
+  background: #c4e3cc;
   padding: 5px 9px;
   border-radius: 8px;
   font-weight: 700;
@@ -225,23 +225,23 @@
 }
 
 .patients-status-waiting {
-  background: #f8e8b2;
-  color: #785a16;
+  background: #eaf4ec;
+  color: #526b34;
 }
 
 .patients-status-other {
-  background: #e6eddd;
-  color: #416039;
+  background: #dff0e4;
+  color: #155c3c;
 }
 
 .patients-empty {
   text-align: center;
   padding: 48px 20px;
-  color: #77736d;
+  color: #52705e;
 }
 
 .patients-empty h3 {
-  color: #242424;
+  color: #143e2f;
   margin: 12px 0 6px;
 }
 
@@ -257,13 +257,13 @@
 }
 
 .patients-alert-error {
-  background: #fbe2e0;
-  color: #922e2e;
+  background: #fae6e4;
+  color: #993c3c;
 }
 
 .patients-alert-success {
-  background: #e5efdb;
-  color: #355b31;
+  background: #dff0e4;
+  color: #155c3c;
 }
 
 .patients-modal-backdrop {
@@ -281,7 +281,7 @@
   width: min(100%, 560px);
   max-height: 90vh;
   overflow-y: auto;
-  background: #fffefa;
+  background: #ffffff;
   border-radius: 22px;
   padding: 28px;
 }
@@ -301,7 +301,7 @@
 
 .patients-close-btn {
   display: flex;
-  background: #f1ede6;
+  background: #edf5ef;
   border: 0;
   border-radius: 9px;
   padding: 9px;
@@ -330,22 +330,22 @@
 .patients-form-grid textarea {
   width: 100%;
   box-sizing: border-box;
-  border: 1px solid #dedbd5;
+  border: 1px solid #d4e3d9;
   border-radius: 10px;
   background: white;
   padding: 12px;
-  color: #242424;
+  color: #143e2f;
   font: inherit;
 }
 
 .patients-form-grid input:focus,
 .patients-form-grid textarea:focus {
-  outline: 2px solid #b7c88a;
+  outline: 2px solid #aed1b7;
   outline-offset: 1px;
 }
 
 .patients-form-grid small {
-  color: #77736d;
+  color: #52705e;
   font-weight: 400;
 }
 
@@ -357,7 +357,7 @@
 }
 
 .patients-cancel-btn {
-  background: #f1ede6;
+  background: #edf5ef;
   border: 0;
   border-radius: 12px;
   padding: 12px 18px;
