@@ -1,0 +1,8 @@
+<<<<<<< HEAD
+*.trace.db
+=======
+
+*.mv.db
+*.trace.db
+/donor-service/data/
+>>>>>>> database
