@@ -1,5 +1,6 @@
 package com.hospital.hospital_backend.service;
 
+import com.hospital.database.model.DatabaseHelper;
 import org.springframework.stereotype.Service;
 import com.hospital.hospital_backend.model.Patient;
 
@@ -10,6 +11,8 @@ public class AdmissionManagement {
 
     private final PatientManagement patientManagement;
     private final RoomAllocation roomAllocation;
+
+    private final DatabaseHelper db = new DatabaseHelper();
 
     public AdmissionManagement(PatientManagement patientManagement, RoomAllocation roomAllocation){
         this.patientManagement = patientManagement;
@@ -22,7 +25,7 @@ public class AdmissionManagement {
     public synchronized boolean admitPatient(int id, int roomNum){
 
         //retrieving patient by ID
-        Patient patient = patientManagement.getPatientByID(id);
+        com.hospital.database.model.Patient patient = db.getPatientById(id);
 
         //validation to check if patient exists
         if(patient == null){
@@ -30,17 +33,21 @@ public class AdmissionManagement {
         }
 
         //validation to check if patient status is set to "WAITING"
-        if(!"WAITING".equals(patient.getPatientStatus())){
+        if(!"WAITING".equals(patient.getStatus())){
             return false;
         }
 
         //admitting a patient to a room
-        if(!roomAllocation.roomAssignment(id, roomNum)){
-            return false;
-        }
+        var room = db.getPatientRoom(Integer.toString(roomNum)).get(0);
+        db.updatePatientRoom(room.getId(), room.getName(), false, id);
 
         //admitting patient once room has been reserved
-        patient.setPatientStatus("ADMITTED");
+        db.updatePatient(id,
+                patient.getPriority(),
+                patient.getQueuepos(),
+                null,
+                "ADMITTED",
+                patient.getAilment(), patient.getSymptoms());
 
         return true;
     }
@@ -50,7 +57,7 @@ public class AdmissionManagement {
     //sets the departure time
     public synchronized boolean dischargePatient(int id){
 
-        Patient patient = patientManagement.getPatientByID(id);
+        com.hospital.database.model.Patient patient = db.getPatientById(id);
 
         //validation to check if patient exists
         if(patient == null){
@@ -58,20 +65,21 @@ public class AdmissionManagement {
         }
 
         //checking if patient status is not "ADMITTED"
-        if(!"ADMITTED".equals(patient.getPatientStatus())){
+        if(!"ADMITTED".equals(patient.getStatus())){
             return false;
         }
 
-        //releasing the assigned room 
-        if(!roomAllocation.releaseRoom(id)){
-            return false;
-        }
+        //releasing the assigned room
+        var room = db.getPatientRoomByPatientId(id).get(0);
+        db.updatePatientRoom(room.getId(), room.getName(), true, room.getPatientId());
 
         //setting status to "DISCHARGED"
-        patient.setPatientStatus("DISCHARGED");
-
-        //setting departure time
-        patient.setDepartureTime(LocalDateTime.now());
+        db.updatePatient(id,
+                patient.getPriority(),
+                patient.getQueuepos(),
+                LocalDateTime.now().toString(),
+                "DISCHARGED",
+                patient.getAilment(), patient.getSymptoms());
 
         return true;
     }

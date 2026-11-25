@@ -1,5 +1,6 @@
 package com.hospital.hospital_backend.service;
 
+import com.hospital.database.model.DatabaseHelper;
 import org.springframework.stereotype.Service;
 import com.hospital.hospital_backend.model.Patient;
 import java.util.ArrayList;
@@ -11,6 +12,7 @@ public class EmergencyQueue {
 
     //obtaining registered patients from PatientManagement
     private final PatientManagement patientManagement;
+    private final DatabaseHelper db = new DatabaseHelper();
 
     //constructor
     public EmergencyQueue(PatientManagement patientManagement){
@@ -24,13 +26,13 @@ public class EmergencyQueue {
         List<Patient> waitingPatients = new ArrayList<>();
 
         //retrieving all registered patients
-        List<Patient> patients = patientManagement.getPatients();
+        List<com.hospital.database.model.Patient> patients = db.getPatient(null, "WAITING");
 
         //checking patient status for "WAITING"
         //if status matches, patient is added to waiting list
-        for(Patient patient : patients){
-            if("WAITING".equals(patient.getPatientStatus())){
-                waitingPatients.add(patient);
+        for(com.hospital.database.model.Patient patient : patients){
+            if("WAITING".equals(patient.getStatus())){
+                waitingPatients.add(new Patient(patient));
             }
         }
 
@@ -56,7 +58,7 @@ public class EmergencyQueue {
     public boolean updatePatientPriority(int id, int priority){
 
         //getting patient using their ID
-        Patient patient = patientManagement.getPatientByID(id);
+        com.hospital.database.model.Patient patient = db.getPatientById(id);
 
         //validation to check if patient exists
         if(patient == null){
@@ -70,11 +72,11 @@ public class EmergencyQueue {
 
         //if the patient status is not "WAITING"
         //not reprioritized within the queue
-        if(!"WAITING".equals(patient.getPatientStatus())){
+        if(!"WAITING".equals(patient.getStatus())){
             return false;
         }
 
-        patient.setPatientPriority(priority);
+        db.updatePatient(id, priority, patient.getQueuepos(), patient.getDeparture(), patient.getStatus(), patient.getAilment(), patient.getSymptoms());;
 
         return true;
     }

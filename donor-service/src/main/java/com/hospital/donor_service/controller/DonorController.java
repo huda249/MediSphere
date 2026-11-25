@@ -1,7 +1,7 @@
 package com.hospital.donor_service.controller;
 
 import com.hospital.donor_service.model.BloodBank;
-import com.hospital.donor_service.model.Donor;
+import com.hospital.database.model.Donor;
 import com.hospital.donor_service.model.OrganResource;
 import com.hospital.donor_service.service.DonorMatchingService;
 import org.springframework.web.bind.annotation.*;

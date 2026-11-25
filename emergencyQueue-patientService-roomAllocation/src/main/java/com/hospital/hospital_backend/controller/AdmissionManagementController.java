@@ -13,7 +13,6 @@ import org.springframework.web.bind.annotation.RequestBody;
 @RequestMapping("/api/admissions")
 public class AdmissionManagementController {
 
-
     private final AdmissionManagement admissionManagement;
 
     public AdmissionManagementController(AdmissionManagement admissionManagement){

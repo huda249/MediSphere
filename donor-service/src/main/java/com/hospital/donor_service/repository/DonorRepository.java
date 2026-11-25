@@ -1,6 +1,6 @@
 package com.hospital.donor_service.repository;
 
-import com.hospital.donor_service.model.Donor;
+import com.hospital.database.model.Donor;
 import org.springframework.data.jpa.repository.JpaRepository;
 import java.util.List;
 

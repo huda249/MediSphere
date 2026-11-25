@@ -1,4 +1,5 @@
 package com.hospital.donor_service.model;
+import com.hospital.database.model.*;
 import jakarta.persistence.*;
 import java.time.LocalDateTime;
 
@@ -18,6 +19,15 @@ public class OrganResource {
     private Long version;         // Prevents two surgeries from claiming the same organ
 
     public OrganResource() {}
+
+    public OrganResource(Organ o) {
+        this.id = (long) o.getId();
+        this.organType = o.getName();
+        this.bloodType = o.getBloodType();
+        this.status = o.getStatus();
+        this.harvestTime = LocalDateTime.parse(o.getHarvestTime());
+        this.version = (long)o.getVersion();
+    }
 
     public Long getId() { return id; }
     public void setId(Long id) { this.id = id; }

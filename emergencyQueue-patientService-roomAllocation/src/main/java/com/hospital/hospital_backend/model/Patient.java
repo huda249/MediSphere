@@ -39,6 +39,19 @@ public class Patient {
         this.departureTime = null;
     }
 
+    public Patient(com.hospital.database.model.Patient p) {
+        this.id = p.getId();
+        this.name = p.getName();
+        this.age = p.getAge();
+        this.ailment = p.getAilment();
+        this.symptoms = p.getSymptoms();
+        this.priority = p.getPriority();
+        this.status = "WAITING";
+        this.roomNum = null;
+        this.arrivalTime = LocalDateTime.parse(p.getArrival());
+        this.departureTime = null;
+    }
+
     //getter and setter methods
     //getter for patient ID
     public int getPatientID(){

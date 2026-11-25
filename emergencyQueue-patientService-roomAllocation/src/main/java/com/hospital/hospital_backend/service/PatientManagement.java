@@ -1,5 +1,6 @@
 package com.hospital.hospital_backend.service;
 
+import com.hospital.database.model.DatabaseHelper;
 import org.springframework.stereotype.Service;
 import com.hospital.hospital_backend.model.Patient;
 import java.util.ArrayList;
@@ -10,6 +11,7 @@ public class PatientManagement {
 
     //temporary until database implementation
     private final List<Patient> patients = new ArrayList<>();
+    private final DatabaseHelper db = new DatabaseHelper();
 
     //registering a new patient
     public synchronized boolean registerNewPatient(Patient patient){
@@ -48,30 +50,36 @@ public class PatientManagement {
         //end of validations
 
         //adding valid patient to the patient list
-        patients.add(patient);
+        db.insertPatient(patient.getPatientName(),
+                patient.getPatientAilment(),
+                patient.getPatientAge(),
+                patient.getPatientStatus(),
+                patient.getArrivalTime().toString(),
+                patient.getPatientSymptoms(),
+                patient.getPatientPriority(),
+                0);
+        //patients.add(patient);
         return true;
     }
 
     //retrieving all patients
     public List<Patient> getPatients(){
-        return new ArrayList<>(patients);
+        List<com.hospital.database.model.Patient> patients = (db.getPatient(null, null));
+        List<Patient> ret = new ArrayList<>();
+        for (int i=0 ; i< patients.size(); i++) {
+            ret.add(i, new Patient(patients.get(i)));
+        }
+        return ret;
     }
 
     //retriving a patient by their ID
     public Patient getPatientByID(int id){
-        for(Patient patient : patients){
-            if(patient.getPatientID() == id){
-                return patient;
-            }
-        }
-
-        //returns null if patient does not exist
-        return null;
+        return new Patient(db.getPatientById(id));
     }
 
     //updating the patient info
     public boolean updatePatientInfo(int id, String name, int age, String ailment, String symptoms){
-        Patient patient = getPatientByID(id);
+        com.hospital.database.model.Patient patient = db.getPatientById(id);
 
         //validations:
         //check if patient does exist before updating
@@ -89,13 +97,14 @@ public class PatientManagement {
             return false;
         }
 
+        db.updatePatient(id, patient.getPriority(), patient.getQueuepos(),patient.getDeparture(),patient.getStatus(), ailment, symptoms);
 
         //if patient exists, their info is updated
         //using setter methods from Patient class
-        patient.setPatientName(name);
-        patient.setPatientAge(age);
-        patient.setPatientAilment(ailment);
-        patient.setPatientSymptoms(symptoms);
+        //patient.setPatientName(name);
+        //patient.setPatientAge(age);
+        //patient.setPatientAilment(ailment);
+        //patient.setPatientSymptoms(symptoms);
 
         return true;
     }

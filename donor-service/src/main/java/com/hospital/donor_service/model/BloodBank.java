@@ -1,5 +1,6 @@
 package com.hospital.donor_service.model;
 
+import com.hospital.database.model.*;
 import jakarta.persistence.*;
 import java.time.LocalDate;
 
@@ -19,6 +20,14 @@ public class BloodBank {
     private Long version;         // Prevents double-booking in concurrent surgeries
 
     public BloodBank() {}
+
+    public BloodBank(Blood b) { // casts blood to bloodbank
+        this.id = (long)b.getId();
+        this.bloodType = b.getBloodType();
+        this.quantityUnits = b.getUnits();
+        this.donationDate = LocalDate.parse(b.getHarvestTime());
+        this.donorId = (long)b.getDonorId();
+    }
 
     public Long getId() { return id; }
     public void setId(Long id) { this.id = id; }
