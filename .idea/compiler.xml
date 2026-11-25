@@ -7,15 +7,16 @@
         <sourceTestOutputDir name="target/generated-test-sources/test-annotations" />
         <outputRelativeToContentRoot value="true" />
         <module name="donor-service" />
+        <module name="database" />
         <module name="scheduling-service" />
         <module name="hospital-backend" />
       </profile>
     </annotationProcessing>
     <bytecodeTargetLevel>
-      <module name="database" target="17" />
+      <module name="database" target="10" />
       <module name="donor-service" target="17" />
       <module name="hospital-backend" target="18" />
-      <module name="hospital-parent" target="1.5" />
+      <module name="hospital-parent" target="10" />
       <module name="scheduling-service" target="18" />
     </bytecodeTargetLevel>
   </component>

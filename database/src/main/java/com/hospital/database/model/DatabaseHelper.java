@@ -12,11 +12,11 @@ public class DatabaseHelper {
     private Connection conn;
 
     public static void Create() {
-        var url = "jdbc:sqlite:db.sqlite";
+        var url = "jdbc:sqlite:data/db.sqlite";
 
         // read data from the sql schema
-        File schema = new File("model/schema.sql");
-        System.out.println("Schema path: " + new File("model/schema.sql").getAbsolutePath());
+        File schema = new File("database/src/main/java/com/hospital/database/model/schema.sql");
+        System.out.println("Schema path: " + new File("database/src/main/java/com/hospital/database/model/schema.sql").getAbsolutePath());
         System.out.println("DB path: " + new File("db.sqlite").getAbsolutePath());
         StringBuilder data = new StringBuilder();
         try {
@@ -36,8 +36,8 @@ public class DatabaseHelper {
         }
     }
     public void connect() {
-        var url = "jdbc:sqlite:db.sqlite";
-        System.out.println("DB path: " + new File("db.sqlite").getAbsolutePath());
+        var url = "jdbc:sqlite:data/db.sqlite";
+        System.out.println("DB path: " + new File("data/db.sqlite").getAbsolutePath());
         //var conn = Connection();
         try {
             var c = DriverManager.getConnection(url);
@@ -74,12 +74,16 @@ public class DatabaseHelper {
             try (var stmt = this.conn.createStatement();
                  var rs = stmt.executeQuery("SELECT last_insert_rowid()")) {
                 if (rs.next()) return rs.getInt(1);
-            } return 0;
+            }
+            return 0;
         } catch (SQLException e) {
-            System.out.println("err"+e.getMessage());
+            System.out.println("err" + e.getMessage());
             return 0;
         }
     }
+
+  // IntelliJ API Decompiler stub source generated from a class file
+  // Implementation of methods is not available
 
     public int insertStaff(String name, String address, int salary, String role){
         // if the nullable ones are null, set to defaults
