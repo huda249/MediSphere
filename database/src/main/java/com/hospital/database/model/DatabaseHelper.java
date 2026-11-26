@@ -286,7 +286,8 @@ public class DatabaseHelper {
     // gets
     public ArrayList<Patient> getPatient(String name, String status) {
         if (name == null) name = "";
-        String sql = "SELECT * FROM Patient where name LIKE ? and status = ?;";
+        if (status == null) status = "";
+        String sql = "SELECT * FROM Patient where name LIKE ? and status LIKE ?;";
         try (var query = this.conn.prepareStatement(sql)) {
             query.setString(1, "%"+name+"%");
             query.setString(2, "%"+status+"%");
@@ -477,7 +478,7 @@ public class DatabaseHelper {
     }
 
     public ArrayList<PatientRoom> getPatientRoomByPatientId(int patientId) {
-        String sql = "SELECT * FROM PatientRoom where patientId = ?;";
+        String sql = "SELECT * FROM PatientRoom WHERE patientId = ? AND free = 0;";
         try (var query = this.conn.prepareStatement(sql)) {
             query.setInt(1, patientId);
             var res = query.executeQuery();
@@ -648,6 +649,9 @@ public class DatabaseHelper {
                 var pStatus = res.getString("status");
                 ret.add(new Patient(pid, pName, pAge, pAilment, pSymptoms, pStatus, pArrival, pDeparture, pPriority, pQueuepos));
             }
+            if(ret.isEmpty()){
+                return null;
+            }
             return ret.get(0);
         } catch (SQLException e) {
             System.out.println(e.getMessage());
@@ -817,6 +821,27 @@ public class DatabaseHelper {
         }
     }
 
+    //updating a patient's personal and medical information
+    public int updatePatientInfo(int id, String name, int age, String ailment, String symptoms){
+
+        String sql = "UPDATE Patient SET name = ?, age = ?, ailment = ?, symptoms = ? WHERE id = ?";
+
+        try(var query = this.conn.prepareStatement(sql)){
+            query.setString(1, name);
+            query.setInt(2, age);
+            query.setString(3, ailment);
+            query.setString(4, symptoms);
+            query.setInt(5, id);
+
+            return query.executeUpdate();
+        }
+        catch(SQLException e){
+            System.out.println(e.getMessage());
+            return 0;
+        }
+    }
+
+
     public int updateStaff(int id, String name, int salary, String address, String role) {
         String sql = "UPDATE Staff set name = ? , salary = ? , address = ? , role = ? where id = ?";
         try (var query = this.conn.prepareStatement(sql)) {
@@ -935,6 +960,159 @@ public class DatabaseHelper {
             query.setInt(4, id);
             return query.executeUpdate();
         } catch (SQLException e) {
+            System.out.println(e.getMessage());
+            return 0;
+        }
+    }
+
+    //assigning an available room to a waiting patient
+    public int reservePatientRoom(int roomNum, int patientID){
+
+        String sql = "UPDATE PatientRoom SET free = 0, patientId = ? " +
+                    "WHERE name = ? AND free = 1 " +
+                    "AND EXISTS (SELECT 1 FROM Patient " +
+                    "WHERE id = ? AND status = 'WAITING') " +
+                    "AND NOT EXISTS (SELECT 1 FROM PatientRoom " +
+                    "WHERE patientId = ?)";
+
+        try(var query = this.conn.prepareStatement(sql)){
+            query.setInt(1, patientID);
+            query.setString(2, Integer.toString(roomNum));
+            query.setInt(3, patientID);
+            query.setInt(4, patientID);
+
+            return query.executeUpdate();
+        }
+        catch(SQLException e){
+            System.out.println(e.getMessage());
+            return 0;
+        }
+    }
+
+    //admitting a patient and reserving a room in one transaction
+    public boolean admitPatientTransaction(int patientID, int roomNum){
+
+        //SQL statement for reserving an available room
+        String roomSQL = "UPDATE PatientRoom SET free = 0, patientId = ? " +
+                     "WHERE name = ? AND free = 1 " +
+                     "AND EXISTS (SELECT 1 FROM Patient " +
+                     "WHERE id = ? AND status = 'WAITING') " +
+                     "AND NOT EXISTS (SELECT 1 FROM PatientRoom " +
+                     "WHERE patientId = ?)";
+
+        //SQL statement for updating the patient's status
+        String patientSQL = "UPDATE Patient SET status = 'ADMITTED' " +
+                        "WHERE id = ? AND status = 'WAITING'";
+
+        try(var connection = DriverManager.getConnection("jdbc:sqlite:data/db.sqlite")){
+
+            //starting the transaction
+            connection.setAutoCommit(false);
+
+            try(var roomQuery = connection.prepareStatement(roomSQL);
+                var patientQuery = connection.prepareStatement(patientSQL)){
+
+                roomQuery.setInt(1, patientID);
+                roomQuery.setString(2, Integer.toString(roomNum));
+                roomQuery.setInt(3, patientID);
+                roomQuery.setInt(4, patientID);
+
+                //attempting to reserve the room
+                if(roomQuery.executeUpdate() != 1){
+                    connection.rollback();
+                    return false;
+                }
+
+                patientQuery.setInt(1, patientID);
+
+                //attempting to update the patient's status
+                if(patientQuery.executeUpdate() != 1){
+                    connection.rollback();
+                    return false;
+                }
+
+                //saving both database updates
+                connection.commit();
+                return true;
+
+            }
+            catch(SQLException e){
+                connection.rollback();
+                System.out.println(e.getMessage());
+                return false;
+            }
+        }
+        catch(SQLException e){
+            System.out.println(e.getMessage());
+            return false;
+        }
+    }
+
+    //discharging a patient and releasing their room in one transaction
+    public boolean dischargePatientTransaction(int patientID){
+
+        //SQL statement for releasing the patient's assigned room
+        String roomSQL = "UPDATE PatientRoom SET free = 1, patientId = 0 " +
+                        "WHERE patientId = ? AND free = 0";
+
+        //SQL statement for updating the patient's status and departure time
+        String patientSQL = "UPDATE Patient SET status = 'DISCHARGED', " +
+                        "departure = ? WHERE id = ? AND status = 'ADMITTED'";
+
+        try(var connection = DriverManager.getConnection("jdbc:sqlite:data/db.sqlite")){
+
+            //starting the transaction
+            connection.setAutoCommit(false);
+
+            try(var roomQuery = connection.prepareStatement(roomSQL);
+                var patientQuery = connection.prepareStatement(patientSQL)){
+
+                roomQuery.setInt(1, patientID);
+
+                //attempting to release the patient's room
+                if(roomQuery.executeUpdate() != 1){
+                    connection.rollback();
+                    return false;
+                }
+
+                patientQuery.setString(1, java.time.LocalDateTime.now().toString());
+                patientQuery.setInt(2, patientID);
+
+                //attempting to discharge the patient
+                if(patientQuery.executeUpdate() != 1){
+                    connection.rollback();
+                    return false;
+                }
+
+                //saving both database updates
+                connection.commit();
+                return true;
+
+            }
+            catch(SQLException e){
+                connection.rollback();
+                System.out.println(e.getMessage());
+                return false;
+            }
+        }
+        catch(SQLException e){
+            System.out.println(e.getMessage());
+            return false;
+        }
+    }
+
+    //releasing a room assigned to a patient
+    public int releasePatientRoom(int patientID){
+
+        String sql = "UPDATE PatientRoom SET free = 1, patientId = 0 " +
+                    "WHERE patientId = ? AND free = 0";
+
+        try(var query = this.conn.prepareStatement(sql)){
+            query.setInt(1, patientID);
+
+            return query.executeUpdate();
+        }
+        catch(SQLException e){
             System.out.println(e.getMessage());
             return 0;
         }
@@ -1095,6 +1273,23 @@ public class DatabaseHelper {
             query.executeUpdate();
             return 1;
         } catch (SQLException e) {
+            System.out.println(e.getMessage());
+            return 0;
+        }
+    }
+
+    //updating the priority of a waiting patient
+    public int updatePatientPriority(int id, int priority){
+
+        String sql = "UPDATE Patient SET priority = ? WHERE id = ? AND status = 'WAITING'";
+
+        try(var query = this.conn.prepareStatement(sql)){
+            query.setInt(1, priority);
+            query.setInt(2, id);
+
+            return query.executeUpdate();
+        }
+        catch(SQLException e){
             System.out.println(e.getMessage());
             return 0;
         }
