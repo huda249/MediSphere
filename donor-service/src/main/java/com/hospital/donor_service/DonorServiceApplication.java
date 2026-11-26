@@ -5,14 +5,11 @@ import org.springframework.boot.autoconfigure.SpringBootApplication;
 import org.springframework.boot.persistence.autoconfigure.EntityScan;
 
 @SpringBootApplication
-@EntityScan({
-		"com.hospital.database.model",
-		"com.hospital.donor_service.model"
-})
+@EntityScan("com.hospital.donor_service.model")
 public class DonorServiceApplication {
 
-	public static void main(String[] args) {
-		SpringApplication.run(DonorServiceApplication.class, args);
-	}
+    public static void main(String[] args) {
+        SpringApplication.run(DonorServiceApplication.class, args);
+    }
 
 }
