@@ -1,13 +1,13 @@
 package com.hospital.donor_service.service;
 
-import com.hospital.database.model.*;
-import com.hospital.donor_service.model.*;
-import com.hospital.donor_service.repository.BloodBankRepository;
-import com.hospital.donor_service.repository.DonorRepository;
-import com.hospital.donor_service.repository.OrganResourceRepository;
+import com.hospital.database.model.DatabaseHelper;
+import com.hospital.database.model.Donor;
+import com.hospital.database.model.Blood;
+import com.hospital.database.model.Organ;
+import com.hospital.donor_service.model.BloodBank;
+import com.hospital.donor_service.model.OrganResource;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.client.RestTemplate;
 
 import java.time.LocalDate;
@@ -19,10 +19,6 @@ import java.util.Map;
 
 @Service
 public class DonorMatchingService {
-
-    private final DonorRepository donorRepository;
-    private final BloodBankRepository bloodBankRepository;
-    private final OrganResourceRepository organRepository;
     private final RestTemplate restTemplate = new RestTemplate();
     private final DatabaseHelper db = new DatabaseHelper();
 
@@ -32,13 +28,7 @@ public class DonorMatchingService {
     @Value("${er.service.url}")
     private String erServiceUrl;
 
-    public DonorMatchingService(DonorRepository donorRepository,
-                                BloodBankRepository bloodBankRepository,
-                                OrganResourceRepository organRepository) {
-        this.donorRepository = donorRepository;
-        this.bloodBankRepository = bloodBankRepository;
-        this.organRepository = organRepository;
-    }
+    
 
     // 1. Blood Compatibility Rules
     public List<String> getCompatibleDonorTypes(String recipientBloodType) {
@@ -63,14 +53,16 @@ public class DonorMatchingService {
     }
 
     public BloodBank addBloodStock(BloodBank bloodBank) {
+        var id = db.insertBlood(
+            bloodBank.getBloodType(),
+            (int) (long) bloodBank.getDonorId(),
+            "AVAILABLE",
+            bloodBank.getDonationDate().toString(),
+            0,
+            bloodBank.getQuantityUnits()
+        );
 
-        var id = db.insertBlood(bloodBank.getBloodType(),
-                (int) (long) bloodBank.getDonorId(),
-                "",
-                bloodBank.getDonationDate().toString(),
-                0,
-                bloodBank.getQuantityUnits());
-        var b =  db.getBloodById(id);
+        var b = db.getBloodById(id);
         return new BloodBank(b);
     }
 
@@ -89,7 +81,7 @@ public class DonorMatchingService {
         var list = db.getBlood(null, null);
         var ret = new ArrayList<BloodBank>();
         for(int i=0; i < list.size(); i++) {
-            ret.set(i, new BloodBank(list.get(i)));
+            ret.add(new BloodBank(list.get(i)));
         }
         return ret;
     }
@@ -98,7 +90,7 @@ public class DonorMatchingService {
         var list = db.getOrgan(null, null, null, null);
         var ret = new ArrayList<OrganResource>();
         for(int i=0; i < list.size(); i++) {
-            ret.set(i, new OrganResource(list.get(i)));
+            ret.add(new OrganResource(list.get(i)));
         }
         return ret;
     }
@@ -112,9 +104,19 @@ public class DonorMatchingService {
             ArrayList<Blood> matchingBlood = db.getBlood(compatibleTypes.get(i), "AVAILABLE");
             ArrayList<Donor> matchingDonorsOfType = db.getDonor(null, null, compatibleTypes.get(i));
             for (int j = 0; j< matchingBlood.size(); j++) {
-                matchingStock.add(new BloodBank(matchingBlood.get(j)));
+                Blood b = matchingBlood.get(j);
+                if (compatibleTypes.get(i).equalsIgnoreCase(b.getBloodType())
+                        && "AVAILABLE".equalsIgnoreCase(b.getStatus())
+                        && b.getUnits() > 0) {
+                    matchingStock.add(new BloodBank(b));
+                }
             }
-            matchingDonors.addAll(matchingDonorsOfType);
+            for (Donor d : matchingDonorsOfType) {
+                if (compatibleTypes.get(i).equalsIgnoreCase(d.getBloodType())
+                        && d.isAvailable()) {
+                    matchingDonors.add(d);
+                }
+            }
         }
 
         int totalAvailableUnits = matchingStock.stream().mapToInt(BloodBank::getQuantityUnits).sum();
@@ -135,12 +137,22 @@ public class DonorMatchingService {
         List<OrganResource> availableOrgans = new ArrayList<>();
         List<Donor> matchingDonors = new ArrayList<>();
         for (int i=0; i < compatibleTypes.size(); i++) {
-            ArrayList<Organ> matchingOrgans = db.getOrgan(null, "AVAILABLE", null, compatibleTypes.get(i));
+            ArrayList<Organ> matchingOrgans = db.getOrgan(organType, "AVAILABLE", null, compatibleTypes.get(i));
             ArrayList<Donor> matchingDonorsOfType = db.getDonor(null, null, compatibleTypes.get(i));
             for (int j = 0 ; j < matchingOrgans.size(); j++) {
-                availableOrgans.add(new OrganResource(matchingOrgans.get(j)));
+                Organ o = matchingOrgans.get(j);
+                if (compatibleTypes.get(i).equalsIgnoreCase(o.getBloodType())
+                        && "AVAILABLE".equalsIgnoreCase(o.getStatus())
+                        && organType.equalsIgnoreCase(o.getName())) {
+                    availableOrgans.add(new OrganResource(o));
+                }
             }
-            matchingDonors.addAll(matchingDonorsOfType);
+            for (Donor d : matchingDonorsOfType) {
+                if (compatibleTypes.get(i).equalsIgnoreCase(d.getBloodType())
+                        && d.isAvailable()) {
+                    matchingDonors.add(d);
+                }
+            }
         }
 
         Map<String, Object> result = new HashMap<>();
@@ -148,41 +160,52 @@ public class DonorMatchingService {
         result.put("patientBloodType", patientBloodType);
         result.put("compatibleDonorTypes", compatibleTypes);
         result.put("availableOrgansInStorage", availableOrgans);
-        result.put("registeredLiveDonors", matchingDonors);
+        result.put("registeredLiveDonors", matchingDonors.stream()
+                .filter(d -> organType.equalsIgnoreCase(d.getOrganType()))
+                .toList());
         return result;
     }
 
     // 4. Concurrency-Safe Reservation + Notify Teammates' Services
-    @Transactional
     public String reserveBlood(Long bloodId, int unitsToReserve) {
-        Blood stock = db.getBloodById((int)(long)bloodId);
-        //BloodBank stock = bloodBankRepository.findById(bloodId)
-        //        .orElseThrow(() -> new RuntimeException("Blood record not found"));
 
-        if (stock.getUnits() < unitsToReserve) {
-            return "FAILED: Not enough units available.";
+        if (unitsToReserve <= 0) {
+            return "FAILED: Units must be greater than zero.";
         }
 
+        Blood stock = db.getBloodById((int)(long)bloodId);
 
-        db.updateBloodUnits((int)(long)bloodId, stock.getUnits() - unitsToReserve);
-        //stock.setQuantityUnits(stock.getQuantityUnits() - unitsToReserve);
-        //bloodBankRepository.save(stock);
+        if (stock == null) {
+            return "FAILED: Blood record not found.";
+        }
+
+        int result = db.reserveBloodUnits((int)(long)bloodId, unitsToReserve);
+
+        if (result != 1) {
+            return "FAILED: Blood reservation could not be completed.";
+        }
 
         notifyDepartments("Reserved " + unitsToReserve + " unit(s) of " + stock.getBloodType() + " blood (ID: " + bloodId + ")");
+
         return "SUCCESS: Reserved " + unitsToReserve + " unit(s) of " + stock.getBloodType() + " blood.";
     }
 
-    @Transactional
     public String reserveOrgan(Long organId) {
+
         Organ organ = db.getOrganById((int)(long)organId);
 
-        if (!"AVAILABLE".equalsIgnoreCase(organ.getStatus())) {
-            return "FAILED: Organ is already " + organ.getStatus();
+        if (organ == null) {
+            return "FAILED: Organ record not found.";
         }
 
-        db.updateOrgan((int)(long)organId, organ.getName(), organ.getDonorId(), organ.getOperationId(), "RESERVED", organ.getHarvestTime());
+        int result = db.reserveOrgan((int)(long)organId);
+
+        if (result != 1) {
+            return "FAILED: Organ reservation could not be completed.";
+        }
 
         notifyDepartments("Reserved " + organ.getName() + " (Blood Type: " + organ.getBloodType() + ", ID: " + organId + ")");
+
         return "SUCCESS: Organ ID " + organId + " (" + organ.getName() + ") is now RESERVED.";
     }
 
@@ -206,3 +229,4 @@ public class DonorMatchingService {
         }
     }
 }
+

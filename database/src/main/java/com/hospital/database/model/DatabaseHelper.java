@@ -1,5 +1,5 @@
 package com.hospital.database.model;
-
+import com.hospital.database.model.Operation;
 import java.io.*;
 import java.sql.*;
 import java.util.ArrayList;
@@ -409,6 +409,9 @@ public class DatabaseHelper {
     }
     public ArrayList<Organ> getOrgan(String name, String status, String harvestTime, String bloodType) {
         if (name == null) name = "";
+        if (status == null) status = "";
+        if (harvestTime == null) harvestTime = "";
+        if (bloodType == null) bloodType = "";
         String sql = "SELECT * FROM Organ where name LIKE ? and status like ? and harvestTime like ? and bloodType like ?;";
         try (var query = this.conn.prepareStatement(sql)) {
             query.setString(1, "%"+name+"%");
@@ -689,7 +692,7 @@ public class DatabaseHelper {
                 var DbloodType = res.getString("bloodType");
                 ret.add(new Donor(Did, Dname, Daddress, DbloodType));
             }
-            return ret.get(0);
+            return ret.isEmpty() ? null : ret.get(0);
         } catch (SQLException e) {
             System.out.println(e.getMessage());
             return null;
@@ -732,7 +735,7 @@ public class DatabaseHelper {
                 var Bunits = res.getInt("units");
                 ret.add( new Blood(Bid, BbloodType, BdonorId, BoperationId, Bstatus, BharvestTime, Bunits));
             }
-            return ret.get(0);
+            return ret.isEmpty() ? null : ret.get(0);
         } catch (SQLException e) {
             System.out.println(e.getMessage());
             return null;
@@ -755,7 +758,7 @@ public class DatabaseHelper {
                 var Btype = res.getString("bloodType");
                 ret.add(new Organ(Bid, BbloodType, BdonorId, BoperationId, Bstatus, BharvestTime, Btype));
             }
-            return ret.get(0);
+            return ret.isEmpty() ? null : ret.get(0);
         } catch (SQLException e) {
             System.out.println(e.getMessage());
             return null;
@@ -869,6 +872,29 @@ public class DatabaseHelper {
             return 0;
         }
     }
+
+    public int reserveBloodUnits(int id, int units) {
+        if (units <= 0) {
+            return 0;
+        }
+
+        String sql = "UPDATE Blood SET units = units - ? "
+            + "WHERE id = ? AND units >= ? "
+            + "AND UPPER(status) = 'AVAILABLE'";
+
+        try (var query = this.conn.prepareStatement(sql)) {
+            query.setInt(1, units);
+            query.setInt(2, id);
+            query.setInt(3, units);
+
+            return query.executeUpdate();
+
+        } catch (SQLException e) {
+            System.out.println(e.getMessage());
+            return 0;
+        }
+    }
+
     public int updateBloodStatus(int id, String status ) {
         String sql = "UPDATE Blood set status = ? where id = ?";
         try (var query = this.conn.prepareStatement(sql)) {
@@ -892,6 +918,21 @@ public class DatabaseHelper {
             query.setString(5, harvestTime);
             query.setInt(6, id);
             return query.executeUpdate();
+        } catch (SQLException e) {
+            System.out.println(e.getMessage());
+            return 0;
+        }
+    }
+
+    public int reserveOrgan(int id) {
+        String sql = "UPDATE Organ SET status = 'RESERVED' "
+            + "WHERE id = ? AND UPPER(status) = 'AVAILABLE'";
+
+        try (var query = this.conn.prepareStatement(sql)) {
+            query.setInt(1, id);
+
+            return query.executeUpdate();
+
         } catch (SQLException e) {
             System.out.println(e.getMessage());
             return 0;
