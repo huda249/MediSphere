@@ -14,9 +14,7 @@ const BLOOD_TYPES = [
 const emptyDonor = {
   name: '',
   bloodType: 'O+',
-  organType: 'None',
-  contactInfo: '',
-  available: true,
+  address: '',
 }
 
 const emptyBlood = {
@@ -132,15 +130,34 @@ function Donors() {
     }
   }
 
-  const registerDonor = async event => {
-    event.preventDefault()
+const registerDonor = async event => {
+  event.preventDefault()
+
+    if (!donorForm.name.trim() || !donorForm.address.trim()) {
+      setError('Donor name and address are required.')
+      return
+    }
+
+    const payload = {
+      name: donorForm.name.trim(),
+      bloodType: donorForm.bloodType,
+      address: donorForm.address.trim(),
+    }
 
     const saved = await runAction(
-      () => apiRequest(
-        '/api/donors/register',
-        jsonOptions(donorForm)
-      ),
-      'Donor registration request completed.'
+      async () => {
+        const result = await apiRequest(
+          '/api/donors/register',
+          jsonOptions(payload)
+        )
+
+        if (!result || !result.id) {
+          throw new Error('Donor registration failed.')
+        }
+
+        return result
+      },
+      'Donor registered successfully.'
     )
 
     if (saved) setDonorForm(emptyDonor)
@@ -604,7 +621,7 @@ function Donors() {
                     <th>ID</th>
                     <th>Name</th>
                     <th>Blood Type</th>
-                    <th>Organ Type</th>
+                    <th>Address</th>
                     <th>Availability</th>
                   </tr>
                 </thead>
@@ -614,7 +631,7 @@ function Donors() {
                       <td>#{item.id}</td>
                       <td><strong>{item.name}</strong></td>
                       <td>{item.bloodType}</td>
-                      <td>{item.organType || 'None'}</td>
+                      <td>{item.address || 'Not provided'}</td>
                       <td>
                         <span className={`donors-pill ${
                           item.available
@@ -656,7 +673,7 @@ function Donors() {
                     value={donorForm.bloodType}
                     onChange={event => setDonorForm({
                       ...donorForm,
-                      bloodType: event.target.value
+                    bloodType: event.target.value
                     })}
                   >
                     {BLOOD_TYPES.map(item => (
@@ -666,44 +683,16 @@ function Donors() {
                 </label>
 
                 <label>
-                  Organ type
-                  <select
-                    value={donorForm.organType}
-                    onChange={event => setDonorForm({
-                      ...donorForm,
-                      organType: event.target.value
-                    })}
-                  >
-                    {['None', 'Kidney', 'Liver', 'Heart', 'Lung']
-                      .map(item => (
-                        <option key={item}>{item}</option>
-                      ))}
-                  </select>
-                </label>
-
-                <label>
-                  Contact information
+                  Address
                   <input
                     required
-                    value={donorForm.contactInfo}
+                    value={donorForm.address}
                     onChange={event => setDonorForm({
                       ...donorForm,
-                      contactInfo: event.target.value
+                      address: event.target.value
                     })}
-                    placeholder="Enter phone number"
+                    placeholder="Enter donor's address"
                   />
-                </label>
-
-                <label className="donors-checkbox">
-                  <input
-                    type="checkbox"
-                    checked={donorForm.available}
-                    onChange={event => setDonorForm({
-                      ...donorForm,
-                      available: event.target.checked
-                    })}
-                  />
-                  Currently available
                 </label>
               </div>
 
@@ -739,7 +728,7 @@ function Donors() {
                       <td>#{item.id}</td>
                       <td><strong>{item.bloodType}</strong></td>
                       <td>{item.quantityUnits}</td>
-                      <td>{item.donationDate || '—'}</td>
+                      <td>{item.donationDate || 'â€”'}</td>
                       <td>
                         <button
                           className="donors-action-button"
