@@ -1,0 +1,30 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project version="4">
+  <component name="CompilerConfiguration">
+    <annotationProcessing>
+      <profile name="Maven default annotation processors profile" enabled="true">
+        <sourceOutputDir name="target/generated-sources/annotations" />
+        <sourceTestOutputDir name="target/generated-test-sources/test-annotations" />
+        <outputRelativeToContentRoot value="true" />
+        <module name="donor-service" />
+        <module name="database" />
+        <module name="scheduling-service" />
+        <module name="hospital-backend" />
+      </profile>
+    </annotationProcessing>
+    <bytecodeTargetLevel>
+      <module name="database" target="10" />
+      <module name="donor-service" target="17" />
+      <module name="hospital-backend" target="18" />
+      <module name="hospital-parent" target="10" />
+      <module name="scheduling-service" target="18" />
+    </bytecodeTargetLevel>
+  </component>
+  <component name="JavacSettings">
+    <option name="ADDITIONAL_OPTIONS_OVERRIDE">
+      <module name="donor-service" options="-parameters" />
+      <module name="hospital-backend" options="-parameters" />
+      <module name="scheduling-service" options="-parameters" />
+    </option>
+  </component>
+</project>

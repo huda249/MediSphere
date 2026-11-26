@@ -7,7 +7,7 @@ import {
 import './Patients.css'
 
 const emptyForm = {
-  id: '',
+
   name: '',
   age: '',
   ailment: '',
@@ -24,6 +24,7 @@ function Patients() {
   const [search, setSearch] = useState('')
   const [showForm, setShowForm] = useState(false)
   const [form, setForm] = useState(emptyForm)
+  const [editingId, setEditingId] = useState(null)
 
   const loadPatients = useCallback(async () => {
     setLoading(true)
@@ -89,37 +90,50 @@ function Patients() {
     setForm(previous => ({ ...previous, [field]: value }))
   }
 
+  const editPatient = patient => {
+    setEditingId(patient.id)
+    setForm({
+      name: patient.name,
+      age: String(patient.age),
+      ailment: patient.ailment,
+      symptoms: patient.symptoms,
+      priority: String(patient.priority),
+    })
+    setError('')
+    setSuccess('')
+    setShowForm(true)
+  }
+
   const registerPatient = async event => {
     event.preventDefault()
     setError('')
     setSuccess('')
 
-    const id = Number(form.id)
+
     const age = Number(form.age)
     const priority = Number(form.priority)
 
-    if (!Number.isInteger(id) || id <= 0) {
-      setError('Patient ID must be a positive whole number.')
-      return
-    }
+
 
     if (!Number.isInteger(age) || age < 0 || age > 130) {
       setError('Enter a valid patient age.')
       return
     }
 
-    if (!Number.isInteger(priority) || priority < 0) {
-      setError('Priority must be a non-negative whole number.')
+    if (!Number.isInteger(priority) || priority < 1 || priority > 5) {
+      setError('Priority must be a whole number between 1 and 5.')
       return
     }
 
-    if (normalizedPatients.some(patient => Number(patient.id) === id)) {
-      setError('A patient with this ID is already displayed in the list.')
+
+
+    if (!form.name.trim()) {
+      setError('Patient name cannot be blank.')
       return
     }
 
     const newPatient = {
-      id,
+
       name: form.name.trim(),
       age,
       ailment: form.ailment.trim(),
@@ -130,27 +144,36 @@ function Patients() {
     setSaving(true)
 
     try {
-      const response = await fetch('/api/patients', {
-        method: 'POST',
+      const response = await fetch(
+        editingId !== null
+          ? `/api/patients/${editingId}`
+          : '/api/patients',
+        {
+        method: editingId !== null ? 'PUT' : 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(newPatient),
       })
 
       if (!response.ok) {
-        throw new Error(`Registration request failed (${response.status})`)
+        throw new Error(`Patient request failed (${response.status})`)
       }
 
       const registered = await response.json()
 
       if (registered !== true) {
-        throw new Error('Patient service did not accept the registration')
+        throw new Error('Patient service did not accept the request')
       }
 
       setShowForm(false)
       setForm(emptyForm)
       setSearch('')
       await loadPatients()
-      setSuccess(`Patient ${newPatient.name} registered successfully.`)
+      setSuccess(
+        editingId !== null
+          ? `Patient ${newPatient.name} updated successfully.`
+          : `Patient ${newPatient.name} registered successfully.`
+      )
+      setEditingId(null)
     } catch (err) {
       setError(err.message)
     } finally {
@@ -183,6 +206,8 @@ function Patients() {
         <button
           className="patients-add-btn"
           onClick={() => {
+            setEditingId(null)
+            setForm(emptyForm)
             setShowForm(true)
             setError('')
             setSuccess('')
@@ -276,6 +301,7 @@ function Patients() {
                 <th>Priority</th>
                 <th>Status</th>
                 <th>Arrival</th>
+                <th>Actions</th>
               </tr>
             </thead>
             <tbody>
@@ -308,6 +334,14 @@ function Patients() {
                     </span>
                   </td>
                   <td>{formatArrival(patient.arrivalTime)}</td>
+                  <td>
+                    <button
+                      className="patients-edit-btn"
+                      onClick={() => editPatient(patient)}
+                    >
+                      Edit
+                    </button>
+                  </td>
                 </tr>
               ))}
             </tbody>
@@ -341,8 +375,10 @@ function Patients() {
           >
             <div className="patients-modal-header">
               <div>
-                <div className="eyebrow">NEW PATIENT</div>
-                <h2 id="patients-modal-title">Register Patient</h2>
+                <div className="eyebrow">{editingId !== null ? "EXISTING PATIENT" : "NEW PATIENT"}</div>
+                <h2 id="patients-modal-title">
+                  {editingId !== null ? 'Edit Patient' : 'Register Patient'}
+                </h2>
               </div>
 
               <button
@@ -356,19 +392,19 @@ function Patients() {
             </div>
 
             <form onSubmit={registerPatient}>
+              {error && (
+                <div className="patients-alert patients-alert-error" role="alert">
+                  {error}
+                </div>
+              )}
               <div className="patients-form-grid">
                 <label>
-                  Patient ID
-                  <input
-                    type="number"
-                    min="1"
-                    step="1"
-                    required
-                    value={form.id}
-                    onChange={event => updateForm('id', event.target.value)}
-                    placeholder="e.g. 1002"
-                  />
-                </label>
+  Patient ID
+  <input
+    value={editingId !== null ? String(editingId) : "Automatically assigned"}
+    readOnly
+  />
+</label>
 
                 <label>
                   Age
@@ -418,19 +454,25 @@ function Patients() {
                 </label>
 
                 <label className="patients-form-full">
-                  Emergency Priority (numeric)
-                  <input
-                    type="number"
-                    min="0"
-                    step="1"
+                  Emergency Priority
+                  <select
                     required
                     value={form.priority}
+                    disabled={editingId !== null}
                     onChange={event =>
                       updateForm('priority', event.target.value)
                     }
-                  />
+                  >
+                    <option value="1">1 - Highest priority</option>
+                    <option value="2">2 - High priority</option>
+                    <option value="3">3 - Moderate priority</option>
+                    <option value="4">4 - Low priority</option>
+                    <option value="5">5 - Lowest priority</option>
+                  </select>
                   <small>
-                    Enter the priority value used by your team's backend.
+                    {editingId !== null
+                      ? 'Priority can be changed through the Emergency Queue.'
+                      : 'Priority 1 is the highest and 5 is the lowest.'}
                   </small>
                 </label>
               </div>
@@ -450,7 +492,11 @@ function Patients() {
                   className="patients-submit-btn"
                   disabled={saving}
                 >
-                  {saving ? 'Registering...' : 'Register Patient'}
+                  {saving
+                    ? 'Saving...'
+                    : editingId !== null
+                      ? 'Save Changes'
+                      : 'Register Patient'}
                 </button>
               </div>
             </form>

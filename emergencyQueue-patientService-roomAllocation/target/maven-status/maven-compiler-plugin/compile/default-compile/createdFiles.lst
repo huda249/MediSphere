@@ -1,0 +1,10 @@
+com/hospital/hospital_backend/HospitalBackendApplication.class
+com/hospital/hospital_backend/model/Patient.class
+com/hospital/hospital_backend/controller/PatientController.class
+com/hospital/hospital_backend/controller/EmergencyQueueController.class
+com/hospital/hospital_backend/service/RoomAllocation.class
+com/hospital/hospital_backend/service/TemporaryRoomService.class
+com/hospital/hospital_backend/service/PatientManagement.class
+com/hospital/hospital_backend/service/AdmissionManagement.class
+com/hospital/hospital_backend/service/EmergencyQueue.class
+com/hospital/hospital_backend/controller/AdmissionManagementController.class

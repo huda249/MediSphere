@@ -1,5 +1,6 @@
 package com.hospital.hospital_backend.service;
 
+import com.hospital.database.model.DatabaseHelper;
 import org.springframework.stereotype.Service;
 import com.hospital.hospital_backend.model.Patient;
 import java.util.ArrayList;
@@ -9,29 +10,27 @@ import java.util.Comparator;
 @Service 
 public class EmergencyQueue {
 
-    //obtaining registered patients from PatientManagement
-    private final PatientManagement patientManagement;
+    private final DatabaseHelper db = new DatabaseHelper();
 
-    //constructor
-    public EmergencyQueue(PatientManagement patientManagement){
-        this.patientManagement = patientManagement;
-    }
-
-    //method to retrieve all waiting paitents 
-    public List<Patient> getWaitingPatients(){
+    //method to retrieve all waiting patients
+    public List<Patient> getWaitingPatients(){  
 
         //creating a new list to store waiting patients
         List<Patient> waitingPatients = new ArrayList<>();
 
-        //retrieving all registered patients
-        List<Patient> patients = patientManagement.getPatients();
+        //retrieving waiting patients from the database
+        List<com.hospital.database.model.Patient> patients = db.getPatient(null, "WAITING");
+
+        //checking if the database query failed
+        if(patients == null){
+            throw new IllegalStateException("Unable to retrieve waiting patients");
+        }
 
         //checking patient status for "WAITING"
-        //if status matches, patient is added to waiting list
-        for(Patient patient : patients){
-            if("WAITING".equals(patient.getPatientStatus())){
-                waitingPatients.add(patient);
-            }
+        for(com.hospital.database.model.Patient patient : patients){
+            if("WAITING".equals(patient.getStatus())){
+            waitingPatients.add(new Patient(patient));
+        }
         }
 
         return waitingPatients;
@@ -56,7 +55,7 @@ public class EmergencyQueue {
     public boolean updatePatientPriority(int id, int priority){
 
         //getting patient using their ID
-        Patient patient = patientManagement.getPatientByID(id);
+        com.hospital.database.model.Patient patient = db.getPatientById(id);
 
         //validation to check if patient exists
         if(patient == null){
@@ -70,13 +69,15 @@ public class EmergencyQueue {
 
         //if the patient status is not "WAITING"
         //not reprioritized within the queue
-        if(!"WAITING".equals(patient.getPatientStatus())){
+        if(!"WAITING".equals(patient.getStatus())){
             return false;
         }
 
-        patient.setPatientPriority(priority);
+        //updating the patient's priority in the database
+        int updated = db.updatePatientPriority(id, priority);
 
-        return true;
+        //checking if the priority was successfully updated
+        return updated > 0; 
     }
 
     //method to retireve the patient's position in the queue

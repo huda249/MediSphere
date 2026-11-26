@@ -1,15 +1,16 @@
 package com.hospital.hospital_backend.service;
 
+import com.hospital.database.model.DatabaseHelper;
 import org.springframework.stereotype.Service;
 import com.hospital.hospital_backend.model.Patient;
 import java.util.ArrayList;
 import java.util.List;
 
-@Service 
+@Service
 public class PatientManagement {
 
-    //temporary until database implementation
-    private final List<Patient> patients = new ArrayList<>();
+    //accessing the database
+    private final DatabaseHelper db = new DatabaseHelper();
 
     //registering a new patient
     public synchronized boolean registerNewPatient(Patient patient){
@@ -17,11 +18,6 @@ public class PatientManagement {
         //validations:
         //checking if patient info is null
         if(patient == null){
-            return false;
-        }
-
-        //checking for a valid patient ID
-        if(patient.getPatientID() <= 0){
             return false;
         }
 
@@ -40,37 +36,91 @@ public class PatientManagement {
             return false;
         }
 
-        //checking if the patient ID already exists
-        if(getPatientByID(patient.getPatientID()) != null){
-            return false;
-        }
-
         //end of validations
 
-        //adding valid patient to the patient list
-        patients.add(patient);
-        return true;
+        //inserting valid patient into the database
+        int patientID = db.insertPatient(
+            patient.getPatientName(),
+            patient.getPatientAilment(),
+            patient.getPatientAge(),
+            patient.getPatientStatus(),
+            patient.getArrivalTime().toString(),
+            patient.getPatientSymptoms(),
+            patient.getPatientPriority(),
+            0
+        );
+
+        //checking if patient was successfully registered
+        return patientID > 0;
     }
 
     //retrieving all patients
     public List<Patient> getPatients(){
-        return new ArrayList<>(patients);
-    }
+        List<com.hospital.database.model.Patient> patients = db.getPatient(null, null);
 
-    //retriving a patient by their ID
-    public Patient getPatientByID(int id){
-        for(Patient patient : patients){
-            if(patient.getPatientID() == id){
-                return patient;
-            }
+        //checking if the database query failed
+        if(patients == null){
+            throw new IllegalStateException("Unable to retrieve patients from the database");
         }
 
-        //returns null if patient does not exist
-        return null;
+        List<Patient> ret = new ArrayList<>();
+
+        for(int i = 0; i < patients.size(); i++){
+
+            //converting the database patient into the backend patient model
+            Patient patient = new Patient(patients.get(i));
+
+            //retrieving the patient's assigned room
+            retrieveAssignedRoom(patient);
+
+            ret.add(patient);
+        }
+
+        return ret;
     }
+
+    //retrieving a patient by their ID
+    public Patient getPatientByID(int id){
+
+        com.hospital.database.model.Patient patient = db.getPatientById(id);
+
+        //checking if the patient exists
+        if(patient == null){
+            return null;
+        }
+
+        //converting the database patient into the backend patient model
+        Patient convertedPatient = new Patient(patient);
+
+        //retrieving the patient's assigned room
+        retrieveAssignedRoom(convertedPatient);
+
+        return convertedPatient;
+    }
+
+    //retrieving the patient's assigned room
+    private void retrieveAssignedRoom(Patient patient){
+
+        var rooms = db.getPatientRoomByPatientId(patient.getPatientID());
+
+        //checking if the database query failed
+        if(rooms == null){
+            throw new IllegalStateException("Unable to retrieve assigned room");
+        }
+
+        //checking if the patient has an assigned room
+        if(!rooms.isEmpty()){
+            patient.setRoomNum(Integer.parseInt(rooms.get(0).getName()));
+        }
+        else{
+            patient.setRoomNum(null);
+        }
+    }
+
 
     //updating the patient info
     public boolean updatePatientInfo(int id, String name, int age, String ailment, String symptoms){
+
         Patient patient = getPatientByID(id);
 
         //validations:
@@ -89,15 +139,11 @@ public class PatientManagement {
             return false;
         }
 
+        //updating patient information in the database
+        int updated = db.updatePatientInfo(id, name, age, ailment, symptoms);
 
-        //if patient exists, their info is updated
-        //using setter methods from Patient class
-        patient.setPatientName(name);
-        patient.setPatientAge(age);
-        patient.setPatientAilment(ailment);
-        patient.setPatientSymptoms(symptoms);
-
-        return true;
+        //checking if patient information was successfully updated
+        return updated > 0;
     }
 
 }

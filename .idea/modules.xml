@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project version="4">
+  <component name="ProjectModuleManager">
+    <modules>
+      <module fileurl="file://$PROJECT_DIR$/data/data.iml" filepath="$PROJECT_DIR$/data/data.iml" />
+      <module fileurl="file://$PROJECT_DIR$/database/database.iml" filepath="$PROJECT_DIR$/database/database.iml" />
+      <module fileurl="file://$PROJECT_DIR$/donor-service/donor-service.iml" filepath="$PROJECT_DIR$/donor-service/donor-service.iml" />
+      <module fileurl="file://$PROJECT_DIR$/emergencyQueue-patientService-roomAllocation/hospital-backend.iml" filepath="$PROJECT_DIR$/emergencyQueue-patientService-roomAllocation/hospital-backend.iml" />
+      <module fileurl="file://$PROJECT_DIR$/hospital-parent.iml" filepath="$PROJECT_DIR$/hospital-parent.iml" />
+      <module fileurl="file://$PROJECT_DIR$/scheduling-service/scheduling-service.iml" filepath="$PROJECT_DIR$/scheduling-service/scheduling-service.iml" />
+    </modules>
+  </component>
+</project>

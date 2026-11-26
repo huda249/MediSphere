@@ -1,0 +1,11 @@
+com/hospital/database/model/Patient.class
+com/hospital/database/model/Staff.class
+com/hospital/database/model/Donor.class
+com/hospital/database/model/PatientRoom.class
+com/hospital/database/model/Operation.class
+com/hospital/database/model/Blood.class
+com/hospital/database/model/OperatingRoom.class
+com/hospital/database/model/Equipment.class
+com/hospital/database/model/DatabaseHelper.class
+com/hospital/database/model/Organ.class
+com/hospital/database/model/test.class

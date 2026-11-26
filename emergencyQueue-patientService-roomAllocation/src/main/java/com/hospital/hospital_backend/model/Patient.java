@@ -22,10 +22,9 @@ public class Patient {
 
     //constructor for new patient
     @JsonCreator 
-    public Patient(@JsonProperty("id") int id, @JsonProperty("name") String name,
+    public Patient(@JsonProperty("name") String name,
      @JsonProperty("age") int age, @JsonProperty("ailment") String ailment, 
      @JsonProperty("symptoms") String symptoms, @JsonProperty("priority") int priority){
-        this.id = id;
         this.name = name;
         this.age = age;
         this.ailment = ailment;
@@ -37,6 +36,24 @@ public class Patient {
         this.roomNum = null;
         this.arrivalTime = LocalDateTime.now();
         this.departureTime = null;
+    }
+
+    public Patient(com.hospital.database.model.Patient p) {
+        this.id = p.getId();
+        this.name = p.getName();
+        this.age = p.getAge();
+        this.ailment = p.getAilment();
+        this.symptoms = p.getSymptoms();
+        this.priority = p.getPriority();
+        this.status = p.getStatus();
+        this.roomNum = null;
+        this.arrivalTime = LocalDateTime.parse(p.getArrival());
+        if(p.getDeparture() != null && !p.getDeparture().isBlank()){
+            this.departureTime = LocalDateTime.parse(p.getDeparture());
+        }
+        else{
+            this.departureTime = null;
+        }
     }
 
     //getter and setter methods
