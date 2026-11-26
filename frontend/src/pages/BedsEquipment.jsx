@@ -6,20 +6,12 @@ import {
 } from 'lucide-react'
 import './BedsEquipment.css'
 
-// These five rooms are defined in TemporaryRoomService.java.
-const ROOM_NUMBERS = [101, 103, 105, 107, 109]
-
-// Equipment data is illustrative, not connected to a live API.
-const SAMPLE_EQUIPMENT = [
-  { name: 'Ventilators', status: 'Operational' },
-  { name: 'Anesthesia Machines', status: 'Operational' },
-  { name: 'Patient Monitors', status: 'Operational' },
-  { name: 'Defibrillators', status: 'Operational' },
-  { name: 'Infusion Pumps', status: 'Maintenance' },
-]
-
 function BedsEquipment() {
   const [patients, setPatients] = useState([])
+  const [availableRooms, setAvailableRooms] = useState([])
+  const [equipment, setEquipment] = useState([])
+  const [roomsLoaded, setRoomsLoaded] = useState(false)
+  const [equipmentError, setEquipmentError] = useState('')
   const [loading, setLoading] = useState(true)
   const [working, setWorking] = useState(false)
   const [error, setError] = useState('')
@@ -29,22 +21,59 @@ function BedsEquipment() {
 
   const loadPatients = useCallback(async () => {
     setLoading(true)
-    setError('')
+    setRoomsLoaded(false)
+    setAvailableRooms([])
+    setSelectedRoom('')
+    setEquipmentError('')
 
     try {
-      const response = await fetch('/api/patients')
+      const response = await fetch('/api/scheduling/resources')
 
       if (!response.ok) {
         throw new Error(`HTTP ${response.status}`)
       }
 
-      const data = await response.json()
+      const resources = await response.json()
 
-      if (!Array.isArray(data)) {
-        throw new Error('Unexpected patient service response')
+      if (!resources.equipment || typeof resources.equipment !== 'object' || Array.isArray(resources.equipment)) {
+        throw new Error('Unexpected equipment response.')
       }
 
-      setPatients(data)
+      const equipmentList = Object.entries(resources.equipment)
+        .map(([id, status]) => ({
+          id,
+          name: id,
+          status,
+        }))
+        .sort((a, b) => a.id.localeCompare(b.id))
+
+      setEquipment(equipmentList)
+    } catch (err) {
+      setEquipment([])
+      setEquipmentError(`Cannot load equipment: ${err.message}`)
+    }
+    setError('')
+
+    try {
+      const [patientResponse, roomResponse] = await Promise.all([
+        fetch('/api/patients'),
+        fetch('/api/admissions/rooms/available'),
+      ])
+
+      if (!patientResponse.ok || !roomResponse.ok) {
+        throw new Error('Unable to retrieve patient or room records.')
+      }
+
+      const patientData = await patientResponse.json()
+      const roomData = await roomResponse.json()
+
+      if (!Array.isArray(patientData) || !Array.isArray(roomData)) {
+        throw new Error('Unexpected hospital service response.')
+      }
+
+      setPatients(patientData)
+      setAvailableRooms(roomData)
+      setRoomsLoaded(true)
     } catch (err) {
       setError(`Cannot load hospital records: ${err.message}`)
     } finally {
@@ -74,15 +103,25 @@ function BedsEquipment() {
     patient => patient.status === 'WAITING'
   )
 
-  const rooms = ROOM_NUMBERS.map(number => ({
+  const roomNumbers = [...new Set([
+    ...availableRooms.map(room => Number(room.name)),
+    ...admittedPatients
+      .filter(patient => patient.roomNum !== null)
+      .map(patient => Number(patient.roomNum)),
+  ])].sort((a, b) => a - b)
+
+  const rooms = roomNumbers.map(number => ({
     number,
+    available: roomsLoaded && availableRooms.some(
+      room => Number(room.name) === number && room.free
+    ),
     patient: admittedPatients.find(
       patient => Number(patient.roomNum) === number
     ) ?? null,
   }))
 
   const occupiedCount = rooms.filter(room => room.patient).length
-  const availableCount = rooms.length - occupiedCount
+  const availableCount = availableRooms.filter(room => room.free).length
 
   const handleAdmission = async event => {
     event.preventDefault()
@@ -197,8 +236,8 @@ function BedsEquipment() {
             <span>Available Rooms</span>
             <CheckCircle2 size={21} />
           </div>
-          <strong>{availableCount}</strong>
-          <small>Estimated from patient records</small>
+          <strong>{roomsLoaded ? availableCount : "Unavailable"}</strong>
+          <small>Retrieved from the admissions service</small>
         </article>
 
         <article className="beds-stat beds-pink">
@@ -262,15 +301,14 @@ function BedsEquipment() {
                     ? 'beds-status beds-occupied'
                     : 'beds-status beds-available'
                 }>
-                  {room.patient ? 'Occupied' : 'Available*'}
+                  {room.patient ? 'Occupied' : (room.available ? 'Available' : 'Unavailable')}
                 </span>
               </div>
             ))}
           </div>
 
           <p className="beds-footnote">
-            *Availability is inferred from patient records.
-            The backend validates each reservation.
+            Room availability is retrieved from the admissions service. The backend validates each reservation.
           </p>
         </section>
 
@@ -314,7 +352,7 @@ function BedsEquipment() {
                 <option value="">Choose an available room</option>
 
                 {rooms
-                  .filter(room => !room.patient)
+                  .filter(room => room.available && !room.patient)
                   .map(room => (
                     <option key={room.number} value={room.number}>
                       Room {room.number}
@@ -326,7 +364,7 @@ function BedsEquipment() {
             <button
               type="submit"
               className="beds-dark-button beds-submit"
-              disabled={loading || working || !waitingPatients.length}
+              disabled={loading || working || !roomsLoaded || !availableCount || !waitingPatients.length}
             >
               <ArrowRightLeft size={18} />
               {working ? 'Processing...' : 'Admit Patient'}
@@ -404,31 +442,35 @@ function BedsEquipment() {
             <h2>Equipment Status</h2>
             <p>Hospital equipment overview</p>
           </div>
-          <span className="beds-demo-tag">Sample data</span>
+          <span className="beds-demo-tag">Scheduling service</span>
         </div>
 
         <div className="beds-equipment-list">
-          {SAMPLE_EQUIPMENT.map(item => (
-            <div className="beds-equipment-row" key={item.name}>
+          {equipmentError && (
+            <div className="beds-notice beds-error">
+              {equipmentError}
+            </div>
+          )}
+          {equipment.map(item => (
+            <div className="beds-equipment-row" key={item.id ?? item.name}>
               <div className="beds-equipment-name">
                 <Wrench size={18} />
-                <span>{item.name}</span>
+                <span>{item.name ?? item.id}</span>
               </div>
 
               <span className={
-                item.status === 'Operational'
+                item.status === 'READY'
                   ? 'beds-status beds-available'
                   : 'beds-status beds-maintenance'
               }>
-                {item.status}
+                {item.status === 'READY' ? 'Operational' : item.status}
               </span>
             </div>
           ))}
         </div>
 
         <p className="beds-footnote">
-          Equipment information is illustrative.
-          No live equipment API is connected.
+          Equipment status is retrieved from the scheduling service.
         </p>
       </section>
     </div>

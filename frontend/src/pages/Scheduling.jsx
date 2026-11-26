@@ -44,7 +44,11 @@ const initialForm = () => ({
 export default function Scheduling() {
   const [week, setWeek] = useState(() => startOfWeek(new Date()))
   const [bookings, setBookings] = useState([])
+  const [patients, setPatients] = useState([])
+  const [patientError, setPatientError] = useState('')
   const [resources, setResources] = useState(null)
+  const [availability, setAvailability] = useState(null)
+  const [checkingAvailability, setCheckingAvailability] = useState(false)
   const [department, setDepartment] = useState('All')
   const [roomFilter, setRoomFilter] = useState('All')
   const [form, setForm] = useState(initialForm)
@@ -53,7 +57,34 @@ export default function Scheduling() {
   const [error, setError] = useState('')
   const [message, setMessage] = useState('')
 
+  const loadPatients = async () => {
+    setPatientError('')
+
+    try {
+      const response = await fetch('/api/patients')
+
+      if (!response.ok) {
+        throw new Error('Unable to retrieve patients.')
+      }
+
+      const data = await response.json()
+
+      if (!Array.isArray(data)) {
+        throw new Error('Unexpected patient response.')
+      }
+
+      setPatients(data.filter(
+        patient => patient.patientStatus !== 'DISCHARGED'
+      ))
+    } catch (err) {
+      setPatients([])
+      setPatientError(err.message)
+    }
+  }
+
   const loadData = async () => {
+    setAvailability(null)
+    await loadPatients()
     setLoading(true)
     setError('')
 
@@ -106,6 +137,11 @@ export default function Scheduling() {
   }
 
   const updateForm = (field, value) => {
+    if (['department', 'date', 'start', 'end', 'recoveryEnd'].includes(field)) {
+      setAvailability(null)
+      setMessage('')
+      setError('')
+    }
     setForm(current => ({
       ...current,
       [field]: value,
@@ -113,6 +149,63 @@ export default function Scheduling() {
         ? { room: value === 'Orthopedics' ? 'OR-3' : 'OR-1' }
         : {})
     }))
+  }
+
+  const checkAvailability = async () => {
+    setError('')
+    setMessage('')
+    setAvailability(null)
+
+    const starts = new Date(`${form.date}T${form.start}`)
+    const ends = new Date(`${form.date}T${form.end}`)
+    const recoveryEnds = new Date(`${form.date}T${form.recoveryEnd}`)
+
+    if (!(starts < ends && ends < recoveryEnds)) {
+      setError('Please enter valid surgery and recovery times.')
+      return
+    }
+
+    const params = new URLSearchParams({
+      department: form.department,
+      starts: starts.toISOString(),
+      ends: ends.toISOString(),
+      recoveryEnds: recoveryEnds.toISOString()
+    })
+
+    setCheckingAvailability(true)
+
+    try {
+      const response = await fetch(`${API}/availability?${params}`)
+
+      if (!response.ok) {
+        throw new Error('Unable to check resource availability.')
+      }
+
+      const data = await response.json()
+
+      if (!Array.isArray(data.rooms) ||
+          !Array.isArray(data.equipment) ||
+          !Array.isArray(data.beds)) {
+        throw new Error('Unexpected availability response.')
+      }
+
+      setAvailability(data)
+
+      setForm(current => ({
+        ...current,
+        room: data.rooms.includes(current.room)
+          ? current.room : (data.rooms[0] ?? ''),
+        equipment: data.equipment.includes(current.equipment)
+          ? current.equipment : (data.equipment[0] ?? ''),
+        bed: data.beds.includes(current.bed)
+          ? current.bed : (data.beds[0] ?? '')
+      }))
+
+    } catch (err) {
+      setError(err.message)
+    } finally {
+      setCheckingAvailability(false)
+    }
   }
 
   const submitBooking = async (event) => {
@@ -128,7 +221,7 @@ export default function Scheduling() {
       !Number.isInteger(Number(form.patientId)) ||
       Number(form.patientId) <= 0
     ) {
-      setError('Enter a valid numeric patient ID.')
+      setError('Please select a valid patient.')
       return
     }
 
@@ -330,17 +423,25 @@ export default function Scheduling() {
             <h2>New OR Reservation</h2>
           </div>
 
-          <form onSubmit={submitBooking} className="reservation-form">
+          <form onSubmit={submitBooking} className="reservation-form" inert={checkingAvailability ? true : undefined}>
             <label>
-              Patient ID
-              <input
-                type="number"
-                min="1"
+              Patient
+              <select
                 required
-                placeholder="e.g. 1001"
                 value={form.patientId}
                 onChange={e => updateForm('patientId', e.target.value)}
-              />
+              >
+                <option value="">Choose a patient</option>
+                {patients.map(patient => (
+                  <option
+                    key={patient.patientID}
+                    value={patient.patientID}
+                  >
+                    {patient.patientName} (ID {patient.patientID})
+                  </option>
+                ))}
+              </select>
+              {patientError && <small>{patientError}</small>}
             </label>
 
             <label>
@@ -361,7 +462,12 @@ export default function Scheduling() {
                   'OR-3': 'Orthopedics'
                 })
                   .filter(([, dept]) => dept === form.department)
-                  .map(([room]) => <option key={room}>{room}</option>)}
+                  .map(([room]) => (
+                    <option key={room} value={room}
+                      disabled={availability !== null && !availability.rooms.includes(room)}>
+                      {room}{availability !== null && !availability.rooms.includes(room) ? ' - Unavailable' : ''}
+                    </option>
+                  ))}
               </select>
             </label>
 
@@ -374,7 +480,7 @@ export default function Scheduling() {
                   'EQ-2': 'READY',
                   'EQ-3': 'MAINTENANCE'
                 }).map(([id, status]) => (
-                  <option key={id} value={id} disabled={status !== 'READY'}>
+                  <option key={id} value={id} disabled={status !== 'READY' || (availability !== null && !availability.equipment.includes(id))}>
                     {id} — {status}
                   </option>
                 ))}
@@ -410,13 +516,39 @@ export default function Scheduling() {
               Recovery Bed
               <select value={form.bed} onChange={e => updateForm('bed', e.target.value)}>
                 {(resources?.beds ?? ['BED-1', 'BED-2']).map(bed => (
-                  <option key={bed}>{bed}</option>
+                  <option key={bed} value={bed}
+                    disabled={availability !== null && !availability.beds.includes(bed)}>
+                    {bed}{availability !== null && !availability.beds.includes(bed) ? ' - Unavailable' : ''}
+                  </option>
                 ))}
               </select>
             </label>
 
+            <button
+              className="schedule-refresh"
+              type="button"
+              onClick={checkAvailability}
+              disabled={checkingAvailability || loading || saving || !resources}
+            >
+              {checkingAvailability ? 'Checking...' : 'Check Availability'}
+            </button>
+
+            {availability && (
+              <div className="reservation-note" role="status">
+                <strong>Resource Availability</strong>
+                <p>Operating rooms: {availability.rooms.length} available</p>
+                <p>Equipment: {availability.equipment.length} available</p>
+                <p>Recovery beds: {availability.beds.length} available</p>
+                {(!availability.rooms.length ||
+                  !availability.equipment.length ||
+                  !availability.beds.length) && (
+                  <p>No complete reservation is possible for this time.</p>
+                )}
+              </div>
+            )}
+
             <button className="reservation-submit" type="submit"
-              disabled={saving || loading || !resources}>
+              disabled={saving || loading || checkingAvailability || !resources || !form.room || !form.bed || !form.equipment || (availability !== null && (!availability.rooms.includes(form.room) || !availability.beds.includes(form.bed) || !availability.equipment.includes(form.equipment))) || !patients.length || !patients.some(patient => String(patient.patientID) === String(form.patientId))}>
               {saving ? 'Saving Reservation...' : 'Create Reservation'}
             </button>
 

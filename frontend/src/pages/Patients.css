@@ -327,6 +327,7 @@
 }
 
 .patients-form-grid input,
+.patients-form-grid select,
 .patients-form-grid textarea {
   width: 100%;
   box-sizing: border-box;
@@ -339,6 +340,7 @@
 }
 
 .patients-form-grid input:focus,
+.patients-form-grid select:focus,
 .patients-form-grid textarea:focus {
   outline: 2px solid #aed1b7;
   outline-offset: 1px;
@@ -394,4 +396,30 @@
   .patients-modal {
     padding: 20px;
   }
+}
+
+.patients-form-grid input[readonly] {
+  background: #f5faf7;
+  color: #52705e;
+  cursor: default;
+}
+.patients-edit-btn {
+  background: #edf5ef;
+  color: #103f2e;
+  border: 1px solid #d4e3d9;
+  border-radius: 8px;
+  padding: 8px 14px;
+  font: inherit;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.patients-edit-btn:hover {
+  background: #c4e3cc;
+}
+
+.patients-form-grid select:disabled {
+  background: #f5faf7;
+  color: #52705e;
+  cursor: not-allowed;
 }
